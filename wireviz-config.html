@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WireViz Designer</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: Arial, sans-serif; }
+        
+        .flex { display: flex; }
+        .h-screen { height: 100vh; }
+        
+        .sidebar {
+            width: 16rem;
+            background: #f3f4f6;
+            padding: 1rem;
+        }
+        
+        .design-area {
+            flex: 1;
+            background: white;
+            position: relative;
+        }
+        
+        .button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.25rem;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        
+        .button-blue { background: #3b82f6; }
+        .button-blue:hover { background: #2563eb; }
+        
+        .button-green { background: #10b981; }
+        .button-green:hover { background: #059669; }
+        
+        .button-purple { background: #8b5cf6; }
+        .button-purple:hover { background: #7c3aed; }
+        
+        .button-gray {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        .connector-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 0.25rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+        
+        .connector-item:hover {
+            background: #f9fafb;
+            transform: translateX(2px);
+        }
+        
+        .connector-item span:first-child {
+            font-weight: 500;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            width: 24rem;
+        }
+        
+        .input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .connector-box {
+            position: absolute;
+            padding: 1rem;
+            background: #f3f4f6;
+            border-radius: 0.25rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: move;
+            user-select: none;
+        }
+        
+        .pin {
+            padding: 0.5rem;
+            background: white;
+            border-radius: 0.25rem;
+            margin: 0.25rem 0;
+            cursor: pointer;
+        }
+        
+        .pin:hover {
+            background: #f3f4f6;
+        }
+
+        .trash-icon {
+            color: #ef4444;
+            cursor: pointer;
+        }
+        
+        .trash-icon:hover {
+            color: #dc2626;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            animation: slideIn 0.3s ease-out;
+            z-index: 1000;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .cable-selection {
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 1rem 0;
+        }
+
+        .cable-selection .connector-item {
+            cursor: pointer;
+        }
+
+        .cable-selection .connector-item:hover {
+            background: #f3f4f6;
+        }
+
+        .pin.highlighted {
+            background: #10b981 !important;
+            color: white !important;
+        }
+
+        .cable-box {
+            position: absolute;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 0.25rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: move;
+            user-select: none;
+            min-width: 200px;
+        }
+
+        .wire {
+            padding: 0.5rem;
+            padding-left: 1rem;
+            background: white;
+            border-radius: 0.25rem;
+            margin: 0.25rem 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .wire:hover {
+            background: #f3f4f6;
+            transform: translateX(2px);
+        }
+
+        .wire.highlighted {
+            background: #10b981;
+            color: white;
+        }
+
+        .form-section {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: 0.5rem;
+        }
+
+        .form-section h4 {
+            margin: 0 0 1rem 0;
+            color: #374151;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            align-items: center;
+        }
+
+        .input-group .input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .delete-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 0.25rem;
+            width: 2rem;
+            height: 2rem;
+            font-size: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .delete-btn:hover {
+            background: #dc2626;
+        }
+
+        .color-picker-button {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: white;
+        }
+
+        .selected-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            overflow: hidden;
+        }
+
+        .color-palette {
+            position: absolute;
+            z-index: 1000;
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1rem;
+            margin-top: 0.5rem;
+            width: 300px;
+        }
+
+        .color-category {
+            margin-bottom: 1rem;
+        }
+
+        .category-title {
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .colors-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+        }
+
+        .color-box {
+            aspect-ratio: 1;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: transform 0.1s;
+            overflow: hidden;
+        }
+
+        .color-box:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .edit-icon {
+            color: #3b82f6;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0.2rem;
+        }
+
+        .edit-icon:hover {
+            color: #2563eb;
+        }
+
+        .yaml-modal {
+            width: 80%;
+            max-width: 800px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .yaml-output {
+            font-family: monospace;
+            width: 100%;
+            height: 400px;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.25rem;
+            resize: vertical;
+            white-space: pre;
+            overflow: auto;
+        }
+
+        .yaml-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
+        .yaml-actions .button {
+            width: auto;
+        }
+
+        .color-group {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .color-picker-button {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .color-picker-button.secondary {
+            color: #6b7280;
+            background: #f3f4f6;
+        }
+
+        .color-picker-button.secondary:hover {
+            background: #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="flex h-screen">
+        <div class="sidebar">
+            <h2>WireViz Designer</h2>
+            
+            <button class="button button-blue" onclick="showModal('connectorModal')">
+                + Add Connector
+            </button>
+            
+            <button class="button button-green" onclick="showModal('cableModal')">
+                + Add Cable
+            </button>
+            
+            <button class="button button-purple" onclick="generateYaml()">
+                ↓ Generate YAML
+            </button>
+            
+            <h3 id="connectorTitle">Connectors (0)</h3>
+            <div id="connectorList"></div>
+            
+            <h3 id="cableTitle">Cables (0)</h3>
+            <div id="cableList"></div>
+        </div>
+        
+        <div id="designArea" class="design-area"></div>
+    </div>
+    
+    <!-- Modal Connector -->
+    <div id="connectorModal" class="modal">
+        <div class="modal-content">
+            <h3>Add Connector</h3>
+            <form id="connectorForm" onsubmit="handleConnectorSubmit(event)">
+                <div class="form-section">
+                    <h4>Connector Details</h4>
+                    <input type="text" class="input" placeholder="Connector Name" name="name" required>
+                    <input type="text" class="input" placeholder="Connector Type" name="type" required>
+                </div>
+                
+                <div class="form-section">
+                    <h4>Pins</h4>
+                    <div id="pinInputs">
+                        <div class="input-group">
+                            <input type="text" class="input" placeholder="Pin 1" name="pins[]" required>
+                            <button type="button" class="delete-btn" onclick="this.parentElement.remove()">×</button>
+                        </div>
+                    </div>
+                    <button type="button" class="button button-gray" onclick="addPinInput()">
+                        Add Pin
+                    </button>
+                </div>
+                
+                <div class="flex" style="gap: 0.5rem; margin-top: 1rem;">
+                    <button type="submit" class="button button-blue">Add</button>
+                    <button type="button" class="button button-gray" onclick="hideModal('connectorModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal Cable -->
+    <div id="cableModal" class="modal">
+        <div class="modal-content">
+            <h3>Add Cable</h3>
+            <form id="cableForm" onsubmit="handleCableSubmit(event)">
+                <div class="form-section">
+                    <h4>Cable Details</h4>
+                    <input type="text" class="input" placeholder="Cable Name" name="name" required>
+                    <input type="text" class="input" placeholder="Cable Type" name="type" required>
+                    <input type="text" class="input" placeholder="Gauge (mm²)" name="gauge" required>
+                    <input type="text" class="input" placeholder="Length (mm)" name="length" required>
+                </div>
+                
+                <div class="form-section">
+                    <h4>Colors</h4>
+                    <div id="colorInputs">
+                        <div class="input-group color-group">
+                            <div class="color-picker-button">
+                                <span>Color 1</span>
+                            </div>
+                            <div class="color-picker-button secondary">
+                                <span>Color 2</span>
+                            </div>
+                            <input type="hidden" name="colors[]" required>
+                            <button type="button" class="delete-btn" onclick="this.parentElement.remove()">×</button>
+                        </div>
+                    </div>
+                    <button type="button" class="button button-gray" onclick="addColorInput()">
+                        Add Color
+                    </button>
+                </div>
+                
+                <div class="flex" style="gap: 0.5rem; margin-top: 1rem;">
+                    <button type="submit" class="button button-green">Add</button>
+                    <button type="button" class="button button-gray" onclick="hideModal('cableModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let connectors = [];
+        let cables = [];
+        let connections = [];
+        let dragging = null;
+        let offset = { x: 0, y: 0 };
+        let isDrawing = false;
+        let startPoint = null;
+        let currentConnection = null;
+
+        // Remplaçons les deux définitions par une seule map de couleurs
+        const wireColors = {
+            'BK': { name: 'Black', hex: '#000000' },
+            'WH': { name: 'White', hex: '#FFFFFF' },
+            'RD': { name: 'Red', hex: '#FF0000' },
+            'BU': { name: 'Blue', hex: '#0000FF' },
+            'GN': { name: 'Green', hex: '#00FF00' },
+            'YE': { name: 'Yellow', hex: '#FFFF00' },
+            'BN': { name: 'Brown', hex: '#8B4513' },
+            'OG': { name: 'Orange', hex: '#FFA500' },
+            'VT': { name: 'Violet', hex: '#8A2BE2' },
+            'GY': { name: 'Gray', hex: '#808080' },
+            'PK': { name: 'Pink', hex: '#FFC0CB' },
+            'TQ': { name: 'Turquoise', hex: '#40E0D0' },
+            'LB': { name: 'Light Blue', hex: '#ADD8E6' },
+            'BG': { name: 'Beige', hex: '#F5F5DC' },
+            'IV': { name: 'Ivory', hex: '#FFFFF0' },
+            'SL': { name: 'Silver', hex: '#C0C0C0' },
+            'CU': { name: 'Copper', hex: '#B87333' },
+            'SN': { name: 'Tin', hex: '#D3D3D3' },
+            'SR': { name: 'Steel', hex: '#71797E' },
+            'GD': { name: 'Gold', hex: '#FFD700' }
+        };
+
+        // Fonctions utilitaires
+        function showModal(id) {
+            document.getElementById(id).style.display = 'flex';
+            
+            if (id === 'cableModal') {
+                // Initialiser le color picker pour le premier champ
+                const colorPicker = document.querySelector('#colorInputs .color-picker-button');
+                const hiddenInput = document.querySelector('#colorInputs input[type="hidden"]');
+                initializeColorPicker(colorPicker, hiddenInput);
+            }
+        }
+
+        function hideModal(id) {
+            document.getElementById(id).style.display = 'none';
+            const form = document.getElementById(id === 'connectorModal' ? 'connectorForm' : 'cableForm');
+            
+            // Réinitialiser le formulaire
+            form.reset();
+            
+            // Réinitialiser le handler de soumission
+            if (id === 'connectorModal') {
+                form.onsubmit = handleConnectorSubmit;
+                document.getElementById('pinInputs').innerHTML = `
+                    <div class="input-group">
+                        <input type="text" class="input" placeholder="Pin 1" name="pins[]" required>
+                        <button type="button" class="delete-btn" onclick="this.parentElement.remove()">×</button>
+                    </div>
+                `;
+            } else {
+                form.onsubmit = handleCableSubmit;
+                document.getElementById('colorInputs').innerHTML = `
+                    <div class="input-group color-group">
+                        <div class="color-picker-button">
+                            <span>Couleur 1</span>
+                        </div>
+                        <div class="color-picker-button secondary">
+                            <span>Couleur 2</span>
+                        </div>
+                        <input type="hidden" name="colors[]" required>
+                        <button type="button" class="delete-btn" onclick="this.parentElement.remove()">×</button>
+                    </div>
+                `;
+                
+                // Initialiser les color pickers pour le premier groupe
+                const colorGroup = document.querySelector('#colorInputs .color-group');
+                const colorPicker1 = colorGroup.querySelector('.color-picker-button:nth-child(1)');
+                const colorPicker2 = colorGroup.querySelector('.color-picker-button:nth-child(2)');
+                const hiddenInput = colorGroup.querySelector('input[type="hidden"]');
+                
+                let color1Value = '', color2Value = '';
+                
+                colorPicker1.onclick = () => {
+                    const palette = createColorPalette((colorCode) => {
+                        color1Value = colorCode;
+                        colorPicker1.innerHTML = `
+                            <div class="selected-color" style="background-color: ${getColorCode(colorCode)}"></div>
+                            <span>${colorCode}</span>
+                        `;
+                        hiddenInput.value = color2Value ? color1Value + color2Value : color1Value;
+                        palette.remove();
+                    });
+                    colorGroup.appendChild(palette);
+                };
+                
+                colorPicker2.onclick = () => {
+                    const palette = createColorPalette((colorCode) => {
+                        color2Value = colorCode;
+                        colorPicker2.innerHTML = `
+                            <div class="selected-color" style="background-color: ${getColorCode(colorCode)}"></div>
+                            <span>${colorCode}</span>
+                        `;
+                        hiddenInput.value = color1Value + colorCode;
+                        palette.remove();
+                    });
+                    colorGroup.appendChild(palette);
+                };
+            }
+            
+            // Réinitialiser le texte du bouton submit
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Add';
+            
+            // Supprimer l'ID d'édition
+            delete form.dataset.editId;
+        }
+
+        function addPinInput() {
+            const container = document.getElementById('pinInputs');
+            const div = document.createElement('div');
+            div.className = 'input-group';
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'input';
+            input.name = 'pins[]';
+            input.placeholder = `Pin ${container.children.length + 1}`;
+            input.required = true;
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = '×';
+            deleteBtn.onclick = () => div.remove();
+            
+            div.appendChild(input);
+            div.appendChild(deleteBtn);
+            container.appendChild(div);
+        }
+
+        // Modifions la fonction addColorInput pour corriger l'initialisation des color pickers
+        function addColorInput() {
+            const container = document.getElementById('colorInputs');
+            const div = document.createElement('div');
+            div.className = 'input-group color-group';
+            
+            // Première couleur
+            const colorPicker1 = document.createElement('div');
+            colorPicker1.className = 'color-picker-button';
+            colorPicker1.innerHTML = '<span>Couleur 1</span>';
+            
+            // Deuxième couleur
+            const colorPicker2 = document.createElement('div');
+            colorPicker2.className = 'color-picker-button secondary';
+            colorPicker2.innerHTML = '<span>Couleur 2</span>';
+            
+            // Input caché pour stocker la combinaison finale
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'colors[]';
+            hiddenInput.required = true;
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = '×';
+            deleteBtn.onclick = () => div.remove();
+            
+            div.appendChild(colorPicker1);
+            div.appendChild(colorPicker2);
+            div.appendChild(hiddenInput);
+            div.appendChild(deleteBtn);
+            container.appendChild(div);
+            
+            // Initialiser les color pickers avec le même comportement pour tous les brins
+            let color1Value = '', color2Value = '';
+            
+            colorPicker1.onclick = () => {
+                const palette = createColorPalette((colorCode) => {
+                    color1Value = colorCode;
+                    colorPicker1.innerHTML = `
+                        <div class="selected-color" style="background-color: ${getColorCode(colorCode)}"></div>
+                        <span>${colorCode}</span>
+                    `;
+                    hiddenInput.value = color2Value ? color1Value + color2Value : color1Value;
+                    palette.remove();
+                });
+                div.appendChild(palette);
+            };
+            
+            colorPicker2.onclick = () => {
+                const palette = createColorPalette((colorCode) => {
+                    color2Value = colorCode;
+                    colorPicker2.innerHTML = `
+                        <div class="selected-color" style="background-color: ${getColorCode(colorCode)}"></div>
+                        <span>${colorCode}</span>
+                    `;
+                    hiddenInput.value = color1Value + colorCode;
+                    palette.remove();
+                });
+                div.appendChild(palette);
+            };
+        }
+
+        // Modifions la fonction createColorPalette
+        function createColorPalette(onSelect) {
+            const palette = document.createElement('div');
+            palette.className = 'color-palette';
+            
+            const colorsGrid = document.createElement('div');
+            colorsGrid.className = 'colors-grid';
+            
+            Object.entries(wireColors).forEach(([code, color]) => {
+                const colorBox = document.createElement('div');
+                colorBox.className = 'color-box';
+                colorBox.style.backgroundColor = color.hex;
+                
+                if (code === 'WH') {
+                    colorBox.style.border = '1px solid #ccc';
+                }
+                
+                colorBox.title = `${code} (${color.name})`;
+                colorBox.onclick = () => {
+                    onSelect(code);
+                    palette.remove();
+                };
+                colorsGrid.appendChild(colorBox);
+            });
+            
+            palette.appendChild(colorsGrid);
+            
+            // Fermer la palette si on clique en dehors
+            document.addEventListener('click', (e) => {
+                if (!palette.contains(e.target) && !e.target.closest('.color-picker-button')) {
+                    palette.remove();
+                }
+            });
+            
+            return palette;
+        }
+
+        // Modifions la fonction findColorByCode pour utiliser la nouvelle structure
+        function findColorByCode(code) {
+            return wireColors[code] || null;
+        }
+
+        // Gestion des connecteurs
+        function handleConnectorSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const pinInputs = form.querySelectorAll('[name="pins[]"]');
+            
+            // Vérifier qu'il y a au moins un pin
+            if (pinInputs.length === 0) {
+                showNotification("A connector must have at least one pin", "error");
+                return;
+            }
+            
+            const pins = Array.from(pinInputs).map(input => input.value);
+            
+            const connector = {
+                id: `connector-${Date.now()}`,
+                name: form.name.value,
+                type: form.type.value,
+                pins: pins,
+                x: 100,
+                y: 100
+            };
+            
+            connectors.push(connector);
+            hideModal('connectorModal');
+            updateConnectorList();
+            createConnectorElement(connector);
+        }
+
+        function createConnectorElement(connector) {
+            const element = document.createElement('div');
+            element.id = connector.id;
+            element.className = 'connector-box';
+            element.draggable = true;
+            element.style.left = `${connector.x}px`;
+            element.style.top = `${connector.y}px`;
+            
+            const titleEl = document.createElement('div');
+            titleEl.style.fontWeight = 'bold';
+            titleEl.style.marginBottom = '0.5rem';
+            titleEl.textContent = connector.name;
+            element.appendChild(titleEl);
+            
+            connector.pins.forEach((pin, index) => {
+                const pinEl = document.createElement('div');
+                pinEl.className = 'pin';
+                pinEl.textContent = pin;
+                pinEl.onclick = () => handlePinClick(connector, pin);
+                element.appendChild(pinEl);
+            });
+            
+            element.addEventListener('dragstart', (e) => {
+                dragging = connector;
+                const rect = element.getBoundingClientRect();
+                offset.x = e.clientX - rect.left;
+                offset.y = e.clientY - rect.top;
+            });
+            
+            document.getElementById('designArea').appendChild(element);
+        }
+
+        // Gestion des câbles
+        function handleCableSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const colorInputs = form.querySelectorAll('[name="colors[]"]');
+            
+            // Vérifier qu'il y a au moins une couleur
+            if (colorInputs.length === 0) {
+                showNotification("A cable must have at least one color", "error");
+                return;
+            }
+            
+            // Vérifier que toutes les couleurs ont été sélectionnées
+            const colors = Array.from(colorInputs).map(input => input.value);
+            if (colors.some(color => !color)) {
+                showNotification("Please select all colors", "error");
+                return;
+            }
+            
+            const cable = {
+                id: `cable-${Date.now()}`,
+                name: form.name.value,
+                type: form.type.value,
+                gauge: form.gauge.value,
+                length: form.length.value,
+                colors: colors,
+                x: 300,
+                y: 100
+            };
+            
+            cables.push(cable);
+            hideModal('cableModal');
+            updateCableList();
+            createCableElement(cable);
+            showNotification(`Cable "${cable.name}" added successfully`);
+        }
+
+        function createCableElement(cable) {
+            const element = document.createElement('div');
+            element.id = cable.id;
+            element.className = 'cable-box';
+            element.draggable = true;
+            element.style.left = `${cable.x}px`;
+            element.style.top = `${cable.y}px`;
+            
+            const titleEl = document.createElement('div');
+            titleEl.style.fontWeight = 'bold';
+            titleEl.style.marginBottom = '0.5rem';
+            titleEl.textContent = `${cable.name} (${cable.type})`;
+            element.appendChild(titleEl);
+            
+            const infoEl = document.createElement('div');
+            infoEl.style.fontSize = '0.8rem';
+            infoEl.style.marginBottom = '0.5rem';
+            infoEl.textContent = `${cable.gauge}mm² - ${cable.length}mm`;
+            element.appendChild(infoEl);
+            
+            // Créer les brins du câble
+            cable.colors.forEach((color, index) => {
+                const wireEl = document.createElement('div');
+                wireEl.className = 'wire';
+                wireEl.textContent = `${index + 1}: ${color}`;
+                wireEl.style.borderLeft = `4px solid ${getColorCode(color)}`;
+                wireEl.onclick = () => handleWireClick(cable, index + 1);
+                element.appendChild(wireEl);
+            });
+            
+            element.addEventListener('dragstart', (e) => {
+                dragging = cable;
+                const rect = element.getBoundingClientRect();
+                offset.x = e.clientX - rect.left;
+                offset.y = e.clientY - rect.top;
+            });
+            
+            document.getElementById('designArea').appendChild(element);
+        }
+
+        // Modifions la fonction getColorCode pour utiliser directement la map
+        function getColorCode(colorCode) {
+            if (colorCode.length > 2) {
+                // Pour les couleurs composites, retourner un gradient
+                const color1 = wireColors[colorCode.substring(0, 2)]?.hex || '#808080';
+                const color2 = wireColors[colorCode.substring(2)]?.hex || '#808080';
+                return `linear-gradient(to right, ${color1} 0%, ${color1} 50%, ${color2} 50%, ${color2} 100%)`;
+            }
+            return wireColors[colorCode]?.hex || '#808080';
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            
+            // Ajouter une couleur différente selon le type
+            if (type === 'error') {
+                notification.style.backgroundColor = '#ef4444';
+            }
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Mise à jour des listes
+        function updateConnectorList() {
+            const list = document.getElementById('connectorList');
+            document.getElementById('connectorTitle').textContent = `Connectors (${connectors.length})`;
+            list.innerHTML = connectors.map(conn => `
+                <div class="connector-item">
+                    <span>${conn.name}</span>
+                    <div class="item-actions">
+                        <span class="edit-icon" onclick="editConnector('${conn.id}')">✎</span>
+                        <span class="trash-icon" onclick="deleteConnector('${conn.id}')">×</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateCableList() {
+            const list = document.getElementById('cableList');
+            document.getElementById('cableTitle').textContent = `Cables (${cables.length})`;
+            list.innerHTML = cables.map(cable => `
+                <div class="connector-item">
+                    <span>${cable.name}</span>
+                    <div class="item-actions">
+                        <span class="edit-icon" onclick="editCable('${cable.id}')">✎</span>
+                        <span class="trash-icon" onclick="deleteCable('${cable.id}')">×</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteConnector(id) {
+            // Supprimer l'élément visuel du connecteur
+            const element = document.getElementById(id);
+            if (element) element.remove();
+            
+            // Trouver le connecteur pour obtenir son nom
+            const connector = connectors.find(c => c.id === id);
+            if (connector) {
+                // Supprimer toutes les connexions liées à ce connecteur
+                connections = connections.filter(conn => 
+                    conn.from.connector !== connector.name && 
+                    conn.to.connector !== connector.name
+                );
+            }
+            
+            // Supprimer le connecteur de la liste
+            connectors = connectors.filter(c => c.id !== id);
+            
+            // Mettre à jour l'affichage
+            updateConnectorList();
+            updateAllConnections();
+        }
+
+        function deleteCable(id) {
+            // Supprimer l'élément visuel du câble
+            const element = document.getElementById(id);
+            if (element) element.remove();
+            
+            // Trouver le câble pour obtenir son nom
+            const cable = cables.find(c => c.id === id);
+            if (cable) {
+                // Supprimer toutes les connexions liées à ce câble
+                connections = connections.filter(conn => conn.cable !== cable.name);
+            }
+            
+            // Supprimer le câble de la liste
+            cables = cables.filter(c => c.id !== id);
+            
+            // Mettre à jour l'affichage
+            updateCableList();
+            updateAllConnections();
+        }
+
+        // Gestion du drag & drop
+        const designArea = document.getElementById('designArea');
+        designArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        designArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (dragging) {
+                const rect = designArea.getBoundingClientRect();
+                const x = e.clientX - rect.left - offset.x;
+                const y = e.clientY - rect.top - offset.y;
+                
+                const element = document.getElementById(dragging.id);
+                element.style.left = `${x}px`;
+                element.style.top = `${y}px`;
+                
+                dragging.x = x;
+                dragging.y = y;
+                
+                // Mettre à jour toutes les connexions après le déplacement
+                updateAllConnections();
+                
+                dragging = null;
+            }
+        });
+
+        function handlePinClick(connector, pin) {
+            if (!isDrawing) {
+                // Démarrer une nouvelle connexion
+                isDrawing = true;
+                startPoint = { connector: connector.name, pin: pin };
+                highlightPin(connector.id, pin);
+                showNotification("Select a cable wire");
+            } else if (currentConnection && currentConnection.wire !== undefined) {
+                // Finaliser la connexion avec le deuxième pin
+                currentConnection.to = { connector: connector.name, pin: pin };
+                connections.push(currentConnection);
+                
+                // Dessiner la connexion visuellement
+                drawCompleteConnection(currentConnection);
+                
+                // Réinitialiser l'état
+                isDrawing = false;
+                startPoint = null;
+                currentConnection = null;
+                removeHighlights();
+                showNotification("Connection created successfully");
+            }
+        }
+
+        function showCableSelectionDialog(from, to) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'flex';
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3>Select a cable</h3>
+                    <div class="cable-selection">
+                        ${cables.map(cable => `
+                            <div class="connector-item" onclick="createConnection('${from.connector}', '${from.pin}', '${to.connector}', '${to.pin}', '${cable.id}')">
+                                <span>${cable.name}</span>
+                                <span>${cable.type} - ${cable.gauge}mm²</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="button button-gray" onclick="cancelConnection()">Cancel</button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        function createConnection(fromConnector, fromPin, toConnector, toPin, cableId) {
+            const cable = cables.find(c => c.id === cableId);
+            
+            connections.push({
+                from: { connector: fromConnector, pin: fromPin },
+                to: { connector: toConnector, pin: toPin },
+                cable: cable.name,
+                cableIndex: 1
+            });
+            
+            drawConnection(fromConnector, fromPin, toConnector, toPin, cable);
+            
+            isDrawing = false;
+            startPoint = null;
+            removeHighlights();
+            
+            const modal = document.querySelector('.modal[style*="flex"]');
+            if (modal) modal.remove();
+            
+            showNotification("Connection created successfully");
+        }
+
+        function cancelConnection() {
+            isDrawing = false;
+            startPoint = null;
+            removeHighlights();
+            const modal = document.querySelector('.modal[style*="flex"]');
+            if (modal) modal.remove();
+        }
+
+        function highlightPin(connectorId, pin) {
+            const connector = document.getElementById(connectorId);
+            const pins = connector.querySelectorAll('.pin');
+            pins.forEach(p => {
+                if (p.textContent === pin) {
+                    p.style.background = '#10b981';
+                    p.style.color = 'white';
+                }
+            });
+        }
+
+        function removeHighlights() {
+            document.querySelectorAll('.pin').forEach(pin => {
+                pin.style.background = '';
+                pin.style.color = '';
+            });
+            document.querySelectorAll('.wire').forEach(wire => {
+                wire.classList.remove('highlighted');
+            });
+        }
+
+        function drawConnection(fromConnector, fromPin, toConnector, toPin, cable) {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.style.position = 'absolute';
+            svg.style.top = '0';
+            svg.style.left = '0';
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            svg.style.pointerEvents = 'none';
+            
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            const fromElement = findPinElement(fromConnector, fromPin);
+            const toElement = findPinElement(toConnector, toPin);
+            
+            if (fromElement && toElement) {
+                const fromRect = fromElement.getBoundingClientRect();
+                const toRect = toElement.getBoundingClientRect();
+                const designAreaRect = designArea.getBoundingClientRect();
+                
+                const x1 = fromRect.left + fromRect.width - designAreaRect.left;
+                const y1 = fromRect.top + fromRect.height/2 - designAreaRect.top;
+                const x2 = toRect.left - designAreaRect.left;
+                const y2 = toRect.top + toRect.height/2 - designAreaRect.top;
+                
+                line.setAttribute("d", `M ${x1} ${y1} C ${(x1+x2)/2} ${y1}, ${(x1+x2)/2} ${y2}, ${x2} ${y2}`);
+                line.setAttribute("stroke", "#10b981");
+                line.setAttribute("stroke-width", "2");
+                line.setAttribute("fill", "none");
+                
+                svg.appendChild(line);
+                designArea.appendChild(svg);
+            }
+        }
+
+        function findPinElement(connectorName, pinLabel) {
+            const connector = connectors.find(c => c.name === connectorName);
+            if (!connector) return null;
+            
+            const connectorElement = document.getElementById(connector.id);
+            if (!connectorElement) return null;
+            
+            return Array.from(connectorElement.querySelectorAll('.pin'))
+                .find(pin => pin.textContent === pinLabel);
+        }
+
+        function generateYaml() {
+            let yaml = 'connectors:\n';
+            
+            connectors.forEach(connector => {
+                yaml += `  ${connector.name}:\n`;
+                yaml += `    type: ${connector.type}\n`;
+                yaml += `    pinlabels: [${connector.pins.join(', ')}]\n\n`;
+            });
+
+            yaml += 'cables:\n';
+            cables.forEach(cable => {
+                yaml += `  ${cable.name}:\n`;
+                yaml += `    category: bundle\n`;
+                yaml += `    type: ${cable.type}\n`;
+                yaml += `    gauge: ${cable.gauge} mm²\n`;
+                yaml += `    length: ${cable.length} mm\n`;
+                yaml += `    colors: [${cable.colors.join(', ')}]\n\n`;
+            });
+
+            yaml += 'connections:\n';
+            
+            const groupedConnections = connections.reduce((groups, conn) => {
+                const key = `${conn.from.connector}-${conn.cable}-${conn.to.connector}`;
+                
+                if (!groups[key]) {
+                    groups[key] = {
+                        from: { connector: conn.from.connector, pins: [conn.from.pin] },
+                        cable: { name: conn.cable, wires: [conn.wire] },
+                        to: { connector: conn.to.connector, pins: [conn.to.pin] }
+                    };
+                } else {
+                    groups[key].from.pins.push(conn.from.pin);
+                    groups[key].cable.wires.push(conn.wire);
+                    groups[key].to.pins.push(conn.to.pin);
+                }
+                
+                return groups;
+            }, {});
+
+            Object.values(groupedConnections).forEach(group => {
+                yaml += '  -\n';
+                yaml += `    - ${group.from.connector}: [${group.from.pins.join(', ')}]\n`;
+                yaml += `    - ${group.cable.name}: [${group.cable.wires.join(', ')}]\n`;
+                yaml += `    - ${group.to.connector}: [${group.to.pins.join(', ')}]\n\n`;
+            });
+
+            // Créer la popup
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'flex';
+            
+            modal.innerHTML = `
+                <div class="modal-content yaml-modal">
+                    <h3>Generated YAML</h3>
+                    <textarea class="yaml-output" readonly>${yaml}</textarea>
+                    <div class="yaml-actions">
+                        <button class="button button-blue" onclick="copyYaml()">
+                            Copy to Clipboard
+                        </button>
+                        <button class="button button-green" onclick="downloadYaml()">
+                            Download YAML
+                        </button>
+                        <button class="button button-gray" onclick="this.closest('.modal').remove()">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        function copyYaml() {
+            const textarea = document.querySelector('.yaml-output');
+            textarea.select();
+            document.execCommand('copy');
+            showNotification('YAML copied to clipboard');
+        }
+
+        function downloadYaml() {
+            const yaml = document.querySelector('.yaml-output').value;
+            const blob = new Blob([yaml], { type: 'text/yaml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'wireviz-config.yml';
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotification('YAML file downloaded');
+        }
+
+        // Modifions la fonction de connexion pour gérer les brins de câble
+        function handleWireClick(cable, wireNumber) {
+            if (isDrawing && startPoint && !currentConnection) {
+                // Créer la première partie de la connexion
+                currentConnection = {
+                    from: startPoint,
+                    cable: cable.name,
+                    wire: wireNumber,
+                    to: null
+                };
+                highlightWire(cable.id, wireNumber);
+                showNotification("Select a pin on destination connector");
+            }
+        }
+
+        // Fonction pour dessiner une connexion complète
+        function drawCompleteConnection(connection) {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.style.position = 'absolute';
+            svg.style.top = '0';
+            svg.style.left = '0';
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            svg.style.pointerEvents = 'none';
+            
+            const connectionId = `${connection.from.connector}-${connection.from.pin}-${connection.cable}-${connection.wire}-${connection.to.connector}-${connection.to.pin}`;
+            svg.setAttribute('data-connection-id', connectionId);
+            
+            const fromElement = findPinElement(connection.from.connector, connection.from.pin);
+            const wireElement = findWireElement(connection.cable, connection.wire);
+            const toElement = findPinElement(connection.to.connector, connection.to.pin);
+            
+            if (fromElement && wireElement && toElement) {
+                const designAreaRect = designArea.getBoundingClientRect();
+                const fromRect = fromElement.getBoundingClientRect();
+                const wireRect = wireElement.getBoundingClientRect();
+                const toRect = toElement.getBoundingClientRect();
+                
+                const cable = cables.find(c => c.name === connection.cable);
+                const wireColor = cable.colors[connection.wire - 1];
+                
+                // Première ligne (connecteur de départ vers câble)
+                const line1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                const x1 = fromRect.left + fromRect.width - designAreaRect.left;
+                const y1 = fromRect.top + fromRect.height/2 - designAreaRect.top;
+                const x2 = wireRect.left - designAreaRect.left;
+                const y2 = wireRect.top + wireRect.height/2 - designAreaRect.top;
+                
+                line1.setAttribute("d", `M ${x1} ${y1} C ${(x1+x2)/2} ${y1}, ${(x1+x2)/2} ${y2}, ${x2} ${y2}`);
+                
+                // Deuxième ligne (câble vers connecteur d'arrivée)
+                const line2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                const x3 = wireRect.left + wireRect.width - designAreaRect.left;
+                const y3 = wireRect.top + wireRect.height/2 - designAreaRect.top;
+                const x4 = toRect.left - designAreaRect.left;
+                const y4 = toRect.top + toRect.height/2 - designAreaRect.top;
+                
+                line2.setAttribute("d", `M ${x3} ${y3} C ${(x3+x4)/2} ${y3}, ${(x3+x4)/2} ${y4}, ${x4} ${y4}`);
+                
+                // Si le fil a deux couleurs, on utilise un motif de tirets
+                if (wireColor.length > 2) {
+                    const color1 = wireColors[wireColor.substring(0, 2)]?.hex || '#808080';
+                    const color2 = wireColors[wireColor.substring(2)]?.hex || '#808080';
+                    
+                    line1.setAttribute("stroke-dasharray", "10,10");
+                    line2.setAttribute("stroke-dasharray", "10,10");
+                    
+                    // Premier segment en couleur 1
+                    const line1Color1 = line1.cloneNode(true);
+                    line1Color1.setAttribute("stroke", color1);
+                    line1Color1.setAttribute("stroke-width", "2");
+                    line1Color1.setAttribute("fill", "none");
+                    
+                    // Deuxième segment en couleur 2 (décalé)
+                    const line1Color2 = line1.cloneNode(true);
+                    line1Color2.setAttribute("stroke", color2);
+                    line1Color2.setAttribute("stroke-width", "2");
+                    line1Color2.setAttribute("fill", "none");
+                    line1Color2.setAttribute("stroke-dashoffset", "10");
+                    
+                    // Même chose pour la deuxième ligne
+                    const line2Color1 = line2.cloneNode(true);
+                    line2Color1.setAttribute("stroke", color1);
+                    line2Color1.setAttribute("stroke-width", "2");
+                    line2Color1.setAttribute("fill", "none");
+                    
+                    const line2Color2 = line2.cloneNode(true);
+                    line2Color2.setAttribute("stroke", color2);
+                    line2Color2.setAttribute("stroke-width", "2");
+                    line2Color2.setAttribute("fill", "none");
+                    line2Color2.setAttribute("stroke-dashoffset", "10");
+                    
+                    svg.appendChild(line1Color1);
+                    svg.appendChild(line1Color2);
+                    svg.appendChild(line2Color1);
+                    svg.appendChild(line2Color2);
+                } else {
+                    // Comportement normal pour une seule couleur
+                    line1.setAttribute("stroke", getColorCode(wireColor));
+                    line1.setAttribute("stroke-width", "2");
+                    line1.setAttribute("fill", "none");
+                    
+                    line2.setAttribute("stroke", getColorCode(wireColor));
+                    line2.setAttribute("stroke-width", "2");
+                    line2.setAttribute("fill", "none");
+                    
+                    svg.appendChild(line1);
+                    svg.appendChild(line2);
+                }
+
+                // Ajouter le bouton de suppression
+                const deleteButton = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                deleteButton.style.pointerEvents = 'all';
+                
+                const deleteX = wireRect.right - designAreaRect.left - 20;
+                const deleteY = wireRect.top + wireRect.height/2 - designAreaRect.top;
+                
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", deleteX);
+                circle.setAttribute("cy", deleteY);
+                circle.setAttribute("r", "8");
+                circle.setAttribute("fill", "#ef4444");
+                
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", deleteX);
+                text.setAttribute("y", deleteY);
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("dominant-baseline", "middle");
+                text.setAttribute("fill", "white");
+                text.setAttribute("font-size", "12px");
+                text.textContent = "×";
+                
+                deleteButton.appendChild(circle);
+                deleteButton.appendChild(text);
+                deleteButton.onclick = () => deleteConnection(connectionId);
+                
+                svg.appendChild(deleteButton);
+                designArea.appendChild(svg);
+            } else {
+                console.warn('Impossible de trouver tous les éléments pour la connexion:', connection);
+            }
+        }
+
+        // Fonction utilitaire pour trouver un élément de brin
+        function findWireElement(cableName, wireNumber) {
+            const cable = cables.find(c => c.name === cableName);
+            if (!cable) return null;
+            
+            const cableElement = document.getElementById(cable.id);
+            if (!cableElement) return null;
+            
+            return Array.from(cableElement.querySelectorAll('.wire'))
+                .find((wire, index) => index === wireNumber - 1);
+        }
+
+        // Fonction pour mettre en surbrillance un brin
+        function highlightWire(cableId, wireNumber) {
+            const cable = document.getElementById(cableId);
+            const wires = cable.querySelectorAll('.wire');
+            wires.forEach((wire, index) => {
+                if (index === wireNumber - 1) {
+                    wire.classList.add('highlighted');
+                }
+            });
+        }
+
+        // Ajoutons ces nouvelles fonctions pour gérer la mise à jour des connexions
+        function updateAllConnections() {
+            // Supprimer toutes les lignes SVG existantes
+            const existingSvgs = designArea.querySelectorAll('svg');
+            existingSvgs.forEach(svg => svg.remove());
+            
+            // Redessiner toutes les connexions
+            connections.forEach(connection => {
+                drawCompleteConnection(connection);
+            });
+        }
+
+        // Ajoutons la fonction de suppression de connexion
+        function deleteConnection(connectionId) {
+            const [fromConn, fromPin, cable, wire, toConn, toPin] = connectionId.split('-');
+            
+            // Supprimer la connexion du tableau
+            connections = connections.filter(c => 
+                !(c.from.connector === fromConn &&
+                  c.from.pin === fromPin &&
+                  c.cable === cable &&
+                  c.wire === parseInt(wire) &&
+                  c.to.connector === toConn &&
+                  c.to.pin === toPin)
+            );
+            
+            // Supprimer la ligne SVG
+            const svg = document.querySelector(`svg[data-connection-id="${connectionId}"]`);
+            if (svg) svg.remove();
+            
+            showNotification("Connection deleted");
+        }
+
+        // Modifions également l'affichage de la couleur sélectionnée
+        function updateColorDisplay(colorPicker, colorCode) {
+            if (!colorCode) return;
+            
+            const color = wireColors[colorCode];
+            if (!color) return;
+            
+            colorPicker.innerHTML = `
+                <div class="selected-color" style="background-color: ${color.hex}"></div>
+                <span>${colorCode}</span>
+            `;
+        }
+
+        // Ajoutons cette fonction pour initialiser le color picker
+        function initializeColorPicker(colorPicker, hiddenInput) {
+            // Récupérer la valeur existante
+            const existingValue = hiddenInput.value;
+            let color1Value = existingValue.substring(0, 2);
+            let color2Value = existingValue.length > 2 ? existingValue.substring(2) : '';
+            
+            const colorGroup = colorPicker.closest('.color-group');
+            const colorPicker1 = colorGroup.querySelector('.color-picker-button:nth-child(1)');
+            const colorPicker2 = colorGroup.querySelector('.color-picker-button:nth-child(2)');
+            
+            colorPicker1.onclick = () => {
+                const palette = createColorPalette((colorCode) => {
+                    color1Value = colorCode;
+                    colorPicker1.innerHTML = `
+                        <div class="selected-color" style="background-color: ${getColorCode(colorCode)}"></div>
+                        <span>${colorCode}</span>
+                    `;
+                    hiddenInput.value = color2Value ? color1Value + color2Value : color1Value;
+                    palette.remove();
+                });
+                colorGroup.appendChild(palette);
+            };
+            
+            colorPicker2.onclick = () => {
+                if (!color1Value) {
+                    showNotification("Please select the first color first");
+                    return;
+                }
+                const palette = createColorPalette((colorCode) => {
+                    color2Value = colorCode;
+                    colorPicker2.innerHTML = `
+                        <div class="selected-color" style="background-color: ${getColorCode(colorCode)}"></div>
+                        <span>${colorCode}</span>
+                    `;
+                    hiddenInput.value = color1Value + color2Value;
+                    palette.remove();
+                });
+                colorGroup.appendChild(palette);
+            };
+        }
+
+        // Ajoutons les fonctions d'édition
+        function editConnector(id) {
+            const connector = connectors.find(c => c.id === id);
+            if (!connector) return;
+
+            // Pré-remplir le formulaire avec les valeurs existantes
+            const form = document.getElementById('connectorForm');
+            form.name.value = connector.name;
+            form.type.value = connector.type;
+
+            // Recréer les champs de pins
+            const pinInputs = document.getElementById('pinInputs');
+            pinInputs.innerHTML = connector.pins.map(pin => `
+                <div class="input-group">
+                    <input type="text" class="input" name="pins[]" value="${pin}" required>
+                    <button type="button" class="delete-btn" onclick="this.parentElement.remove()">×</button>
+                </div>
+            `).join('');
+
+            // Modifier le bouton submit
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Update';
+            
+            // Ajouter l'ID du connecteur en cours d'édition
+            form.dataset.editId = id;
+
+            // Modifier le handler de soumission
+            form.onsubmit = (e) => handleConnectorEdit(e);
+
+            showModal('connectorModal');
+        }
+
+        function editCable(id) {
+            const cable = cables.find(c => c.id === id);
+            if (!cable) return;
+
+            // Pré-remplir le formulaire avec les valeurs existantes
+            const form = document.getElementById('cableForm');
+            form.name.value = cable.name;
+            form.type.value = cable.type;
+            form.gauge.value = cable.gauge;
+            form.length.value = cable.length;
+
+            // Recréer les champs de couleurs
+            const colorInputs = document.getElementById('colorInputs');
+            colorInputs.innerHTML = cable.colors.map(color => {
+                // Séparer les codes de couleur si c'est une couleur double
+                const color1 = color.substring(0, 2);
+                const color2 = color.length > 2 ? color.substring(2) : '';
+                
+                return `
+                    <div class="input-group color-group">
+                        <div class="color-picker-button">
+                            <div class="selected-color" style="background-color: ${getColorCode(color1)}"></div>
+                            <span>${color1}</span>
+                        </div>
+                        <div class="color-picker-button secondary">
+                            ${color2 ? `
+                                <div class="selected-color" style="background-color: ${getColorCode(color2)}"></div>
+                                <span>${color2}</span>
+                            ` : '<span>Couleur 2</span>'}
+                        </div>
+                        <input type="hidden" name="colors[]" value="${color}" required>
+                        <button type="button" class="delete-btn" onclick="this.parentElement.remove()">×</button>
+                    </div>
+                `;
+            }).join('');
+
+            // Réinitialiser les color pickers
+            const colorGroups = colorInputs.querySelectorAll('.color-group');
+            colorGroups.forEach(group => {
+                const hiddenInput = group.querySelector('input[type="hidden"]');
+                const colorPicker = group.querySelector('.color-picker-button');
+                initializeColorPicker(colorPicker, hiddenInput);
+            });
+
+            // Modifier le bouton submit
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Update';
+            
+            // Ajouter l'ID du câble en cours d'édition
+            form.dataset.editId = id;
+
+            // Modifier le handler de soumission
+            form.onsubmit = (e) => handleCableEdit(e);
+
+            showModal('cableModal');
+        }
+
+        // Ajoutons les handlers d'édition
+        function handleConnectorEdit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const pinInputs = form.querySelectorAll('[name="pins[]"]');
+            
+            // Vérifier qu'il y a au moins un pin
+            if (pinInputs.length === 0) {
+                showNotification("A connector must have at least one pin", "error");
+                return;
+            }
+            
+            const pins = Array.from(pinInputs).map(input => input.value);
+            const id = form.dataset.editId;
+
+            // Mettre à jour le connecteur
+            const connector = connectors.find(c => c.id === id);
+            if (connector) {
+                connector.name = form.name.value;
+                connector.type = form.type.value;
+                connector.pins = pins;
+
+                // Mettre à jour l'élément visuel
+                const element = document.getElementById(id);
+                if (element) {
+                    element.querySelector('div').textContent = connector.name;
+                    const pinsContainer = element.querySelectorAll('.pin');
+                    pinsContainer.forEach(p => p.remove());
+                    pins.forEach(pin => {
+                        const pinEl = document.createElement('div');
+                        pinEl.className = 'pin';
+                        pinEl.textContent = pin;
+                        pinEl.onclick = () => handlePinClick(connector, pin);
+                        element.appendChild(pinEl);
+                    });
+                }
+
+                hideModal('connectorModal');
+                updateConnectorList();
+                updateAllConnections();
+                showNotification("Connector updated successfully");
+            }
+        }
+
+        function handleCableEdit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const colorInputs = form.querySelectorAll('[name="colors[]"]');
+            
+            // Vérifier qu'il y a au moins une couleur
+            if (colorInputs.length === 0) {
+                showNotification("A cable must have at least one color", "error");
+                return;
+            }
+            
+            // Vérifier que toutes les couleurs ont été sélectionnées
+            const colors = Array.from(colorInputs).map(input => input.value);
+            if (colors.some(color => !color)) {
+                showNotification("Please select all colors", "error");
+                return;
+            }
+            
+            const id = form.dataset.editId;
+
+            // Mettre à jour le câble
+            const cable = cables.find(c => c.id === id);
+            if (cable) {
+                cable.name = form.name.value;
+                cable.type = form.type.value;
+                cable.gauge = form.gauge.value;
+                cable.length = form.length.value;
+                cable.colors = colors;
+
+                // Mettre à jour l'élément visuel
+                const element = document.getElementById(id);
+                if (element) {
+                    element.remove();
+                    createCableElement(cable);
+                }
+
+                hideModal('cableModal');
+                updateCableList();
+                updateAllConnections();
+                showNotification("Cable updated successfully");
+            }
+        }
+    </script>
+</body>
+</html>
