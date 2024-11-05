@@ -576,7 +576,7 @@
                             <div class="selected-color" style="background-color: ${getColorCode(colorCode)}"></div>
                             <span>${colorCode}</span>
                         `;
-                        hiddenInput.value = color1Value + colorCode;
+                        hiddenInput.value = color1Value + color2Value;
                         palette.remove();
                     });
                     colorGroup.appendChild(palette);
@@ -671,7 +671,7 @@
                         <div class="selected-color" style="background-color: ${getColorCode(colorCode)}"></div>
                         <span>${colorCode}</span>
                     `;
-                    hiddenInput.value = color1Value + colorCode;
+                    hiddenInput.value = color1Value + color2Value;
                     palette.remove();
                 });
                 div.appendChild(palette);
@@ -1561,92 +1561,312 @@
             showModal('cableModal');
         }
 
-        // Ajoutons les handlers d'édition
-        function handleConnectorEdit(event) {
-            event.preventDefault();
-            const form = event.target;
-            const pinInputs = form.querySelectorAll('[name="pins[]"]');
+        // Ajoutons d'abord un bouton d'import dans la sidebar
+        function addImportButton() {
+            const sidebar = document.querySelector('.sidebar');
+            const importButton = document.createElement('button');
+            importButton.className = 'button button-gray';
+            importButton.style.marginBottom = '1rem';
+            importButton.innerHTML = '↑ Import YAML';
+            importButton.onclick = showImportModal;
             
-            // Vérifier qu'il y a au moins un pin
-            if (pinInputs.length === 0) {
-                showNotification("A connector must have at least one pin", "error");
+            // Insérer après le bouton Generate YAML
+            const generateButton = sidebar.querySelector('.button-purple');
+            generateButton.parentNode.insertBefore(importButton, generateButton.nextSibling);
+        }
+
+        // Ajoutons la fonction pour afficher la modal d'import
+        function showImportModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'flex';
+            
+            modal.innerHTML = `
+                <div class="modal-content yaml-modal">
+                    <h3>Import YAML</h3>
+                    <div class="form-section">
+                        <h4>Option 1: Paste YAML content</h4>
+                        <textarea class="yaml-output" placeholder="Paste your YAML content here..."></textarea>
+                    </div>
+                    <div class="form-section">
+                        <h4>Option 2: Upload YAML file</h4>
+                        <input type="file" accept=".yml,.yaml" class="input" style="margin-bottom: 1rem;">
+                    </div>
+                    <div class="yaml-actions">
+                        <button class="button button-blue" onclick="importYamlFromText(this)">
+                            Import from Text
+                        </button>
+                        <button class="button button-green" onclick="importYamlFromFile(this)">
+                            Import from File
+                        </button>
+                        <button class="button button-gray" onclick="this.closest('.modal').remove()">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        // Fonction pour importer depuis le texte
+        function importYamlFromText(button) {
+            const modal = button.closest('.modal');
+            const yamlContent = modal.querySelector('textarea').value;
+            
+            if (!yamlContent.trim()) {
+                showNotification('Please enter YAML content', 'error');
                 return;
             }
             
-            const pins = Array.from(pinInputs).map(input => input.value);
-            const id = form.dataset.editId;
-
-            // Mettre à jour le connecteur
-            const connector = connectors.find(c => c.id === id);
-            if (connector) {
-                connector.name = form.name.value;
-                connector.type = form.type.value;
-                connector.pins = pins;
-
-                // Mettre à jour l'élément visuel
-                const element = document.getElementById(id);
-                if (element) {
-                    element.querySelector('div').textContent = connector.name;
-                    const pinsContainer = element.querySelectorAll('.pin');
-                    pinsContainer.forEach(p => p.remove());
-                    pins.forEach(pin => {
-                        const pinEl = document.createElement('div');
-                        pinEl.className = 'pin';
-                        pinEl.textContent = pin;
-                        pinEl.onclick = () => handlePinClick(connector, pin);
-                        element.appendChild(pinEl);
-                    });
-                }
-
-                hideModal('connectorModal');
-                updateConnectorList();
-                updateAllConnections();
-                showNotification("Connector updated successfully");
+            try {
+                parseAndImportYaml(yamlContent);
+                modal.remove();
+            } catch (error) {
+                showNotification('Error parsing YAML content: ' + error.message, 'error');
             }
         }
 
-        function handleCableEdit(event) {
-            event.preventDefault();
-            const form = event.target;
-            const colorInputs = form.querySelectorAll('[name="colors[]"]');
+        // Fonction pour importer depuis un fichier
+        function importYamlFromFile(button) {
+            const modal = button.closest('.modal');
+            const fileInput = modal.querySelector('input[type="file"]');
+            const file = fileInput.files[0];
             
-            // Vérifier qu'il y a au moins une couleur
-            if (colorInputs.length === 0) {
-                showNotification("A cable must have at least one color", "error");
+            if (!file) {
+                showNotification('Please select a file', 'error');
                 return;
             }
             
-            // Vérifier que toutes les couleurs ont été sélectionnées
-            const colors = Array.from(colorInputs).map(input => input.value);
-            if (colors.some(color => !color)) {
-                showNotification("Please select all colors", "error");
-                return;
-            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const yamlContent = e.target.result;
+                    console.log('File content:', yamlContent); // Debug
+                    if (!yamlContent.trim()) {
+                        throw new Error('File is empty');
+                    }
+                    parseAndImportYaml(yamlContent);
+                    modal.remove();
+                } catch (error) {
+                    console.error('Import error:', error); // Debug
+                    showNotification('Error parsing YAML file: ' + error.message, 'error');
+                }
+            };
             
-            const id = form.dataset.editId;
+            reader.onerror = (error) => {
+                console.error('FileReader error:', error); // Debug
+                showNotification('Error reading file: ' + error.message, 'error');
+            };
+            
+            reader.readAsText(file);
+        }
 
-            // Mettre à jour le câble
-            const cable = cables.find(c => c.id === id);
-            if (cable) {
-                cable.name = form.name.value;
-                cable.type = form.type.value;
-                cable.gauge = form.gauge.value;
-                cable.length = form.length.value;
-                cable.colors = colors;
+        // Fonction principale de parsing et import
+        function parseAndImportYaml(yamlContent) {
+            // Nettoyer l'état actuel
+            connectors = [];
+            cables = [];
+            connections = [];
+            document.getElementById('designArea').innerHTML = '';
+            
+            try {
+                const lines = yamlContent.split('\n');
+                let currentSection = null;
+                let currentItem = null;
+                let currentSubItem = null;
+                
+                const parsedData = {
+                    connectors: {},
+                    cables: {},
+                    connections: []
+                };
+                
+                for (let line of lines) {
+                    line = line.trim();
+                    if (!line) continue;
+                    
+                    console.log('Parsing line:', line); // Debug
+                    
+                    // Détecter les sections principales
+                    if (line === 'connectors:') {
+                        currentSection = 'connectors';
+                        continue;
+                    } else if (line === 'cables:') {
+                        currentSection = 'cables';
+                        continue;
+                    } else if (line === 'connections:') {
+                        currentSection = 'connections';
+                        continue;
+                    }
+                    
+                    // Parser selon la section
+                    if (currentSection === 'connectors') {
+                        const connectorMatch = line.match(/^\s*([A-Za-z0-9_-]+):\s*$/);
+                        if (connectorMatch) {
+                            currentItem = connectorMatch[1];
+                            parsedData.connectors[currentItem] = {};
+                        } else if (currentItem) {
+                            const propertyMatch = line.match(/^\s*(\w+):\s*(.+)$/);
+                            if (propertyMatch) {
+                                const [_, key, value] = propertyMatch;
+                                if (key === 'pinlabels') {
+                                    parsedData.connectors[currentItem][key] = value
+                                        .replace(/[\[\]]/g, '')
+                                        .split(',')
+                                        .map(s => s.trim());
+                                } else {
+                                    parsedData.connectors[currentItem][key] = value;
+                                }
+                            }
+                        }
+                    } else if (currentSection === 'cables') {
+                        const cableMatch = line.match(/^\s*([A-Za-z0-9_-]+):\s*$/);
+                        if (cableMatch) {
+                            currentItem = cableMatch[1];
+                            parsedData.cables[currentItem] = {};
+                        } else if (currentItem) {
+                            const propertyMatch = line.match(/^\s*(\w+):\s*(.+)$/);
+                            if (propertyMatch) {
+                                const [_, key, value] = propertyMatch;
+                                if (key === 'colors') {
+                                    parsedData.cables[currentItem][key] = value
+                                        .replace(/[\[\]]/g, '')
+                                        .split(',')
+                                        .map(s => s.trim());
+                                } else if (key === 'gauge' || key === 'length') {
+                                    parsedData.cables[currentItem][key] = value.split(' ')[0];
+                                } else {
+                                    parsedData.cables[currentItem][key] = value;
+                                }
+                            }
+                        }
+                    } else if (currentSection === 'connections') {
+                        if (line === '-') {
+                            currentSubItem = [];
+                            parsedData.connections.push(currentSubItem);
+                        } else if (line.startsWith('- ')) {
+                            const [connector, pins] = line.substring(2).split(':').map(s => s.trim());
+                            const pinList = pins
+                                .replace(/[\[\]]/g, '')
+                                .split(',')
+                                .map(s => s.trim());
+                            currentSubItem.push({ connector, pins: pinList });
+                        }
+                    }
+                }
+                
+                console.log('Parsed data:', parsedData);
+                
+                // Analyser l'ordre des connexions pour déterminer le positionnement
+                const connectorOrder = new Map(); // Pour stocker l'ordre des connecteurs
+                const cableOrder = new Map();     // Pour stocker l'ordre des câbles
+                let maxOrder = 0;
 
-                // Mettre à jour l'élément visuel
-                const element = document.getElementById(id);
-                if (element) {
-                    element.remove();
+                // Parcourir les connexions pour déterminer l'ordre
+                parsedData.connections.forEach(conn => {
+                    if (conn.length === 3) {
+                        const [from, cable, to] = conn;
+                        
+                        // Si le connecteur de départ n'est pas encore dans l'ordre
+                        if (!connectorOrder.has(from.connector)) {
+                            connectorOrder.set(from.connector, connectorOrder.size * 2);
+                            maxOrder = Math.max(maxOrder, connectorOrder.get(from.connector));
+                        }
+                        
+                        // Positionner le câble après le connecteur de départ
+                        if (!cableOrder.has(cable.connector)) {
+                            cableOrder.set(cable.connector, connectorOrder.get(from.connector) + 1);
+                            maxOrder = Math.max(maxOrder, cableOrder.get(cable.connector));
+                        }
+                        
+                        // Positionner le connecteur d'arrivée après le câble
+                        if (!connectorOrder.has(to.connector)) {
+                            connectorOrder.set(to.connector, cableOrder.get(cable.connector) + 1);
+                            maxOrder = Math.max(maxOrder, connectorOrder.get(to.connector));
+                        }
+                    }
+                });
+
+                // Ajouter les connecteurs/câbles non connectés à la fin
+                Object.keys(parsedData.connectors).forEach(name => {
+                    if (!connectorOrder.has(name)) {
+                        connectorOrder.set(name, ++maxOrder);
+                    }
+                });
+                
+                Object.keys(parsedData.cables).forEach(name => {
+                    if (!cableOrder.has(name)) {
+                        cableOrder.set(name, ++maxOrder);
+                    }
+                });
+
+                // Créer les connecteurs avec leur position basée sur l'ordre
+                Object.entries(parsedData.connectors).forEach(([name, data]) => {
+                    const order = connectorOrder.get(name) || 0;
+                    const connector = {
+                        id: `connector-${Date.now()}-${order}`,
+                        name: name,
+                        type: data.type,
+                        pins: data.pinlabels,
+                        x: 100 + order * 300, // Espacement horizontal de 300px
+                        y: 100 + (order % 2) * 100 // Légère variation verticale pour éviter l'alignement parfait
+                    };
+                    connectors.push(connector);
+                    createConnectorElement(connector);
+                });
+                
+                // Créer les câbles avec leur position basée sur l'ordre
+                Object.entries(parsedData.cables).forEach(([name, data]) => {
+                    const order = cableOrder.get(name) || 0;
+                    const cable = {
+                        id: `cable-${Date.now()}-${order}`,
+                        name: name,
+                        type: data.type,
+                        gauge: data.gauge,
+                        length: data.length,
+                        colors: data.colors,
+                        x: 100 + order * 300, // Même espacement que les connecteurs
+                        y: 100 + (order % 2) * 100
+                    };
+                    cables.push(cable);
                     createCableElement(cable);
-                }
+                });
 
-                hideModal('cableModal');
+                // Créer les connexions
+                parsedData.connections.forEach(conn => {
+                    if (conn.length === 3) {
+                        const [from, cable, to] = conn;
+                        from.pins.forEach((fromPin, index) => {
+                            if (index < cable.pins.length && index < to.pins.length) {
+                                const connection = {
+                                    from: { connector: from.connector, pin: fromPin },
+                                    cable: cable.connector,
+                                    wire: parseInt(cable.pins[index]),
+                                    to: { connector: to.connector, pin: to.pins[index] }
+                                };
+                                connections.push(connection);
+                                console.log('Created connection:', connection); // Debug
+                                drawCompleteConnection(connection);
+                            }
+                        });
+                    }
+                });
+                
+                // Mettre à jour les compteurs
+                updateConnectorList();
                 updateCableList();
-                updateAllConnections();
-                showNotification("Cable updated successfully");
+                
+                showNotification('YAML file imported successfully');
+                
+            } catch (error) {
+                console.error('Error parsing YAML:', error);
+                showNotification('Error parsing YAML file: ' + error.message, 'error');
             }
         }
+
+        // Ajouter le bouton d'import au chargement de la page
+        document.addEventListener('DOMContentLoaded', addImportButton);
     </script>
 </body>
 </html>
