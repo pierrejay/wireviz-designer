@@ -52,6 +52,7 @@ WireViz Designer is a visual interface that simplifies the creation of WireViz c
 
 3. **Generate Configuration**
    - Click "Generate YAML" to export the configuration
+   - A pop up will open to allow you to copy the YAML to your clipboard or download it as a file
    - The generated file will be downloaded as `wireviz-config.yml`
 
 ## Limitations
