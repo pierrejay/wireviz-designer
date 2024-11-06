@@ -83,7 +83,6 @@ Feel free to fork this project and enhance it with additional features. Some pot
 ## Related Links
 
 - [WireViz Project](https://github.com/formatc1702/WireViz)
-- [WireViz Documentation](https://wireviz.readthedocs.io/)
 
 ## License
 

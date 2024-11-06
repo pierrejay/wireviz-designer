@@ -757,12 +757,22 @@
             element.style.left = `${connector.x}px`;
             element.style.top = `${connector.y}px`;
             
+            // Titre avec le nom du connecteur
             const titleEl = document.createElement('div');
             titleEl.style.fontWeight = 'bold';
-            titleEl.style.marginBottom = '0.5rem';
+            titleEl.style.marginBottom = '0.25rem';
             titleEl.textContent = connector.name;
             element.appendChild(titleEl);
             
+            // Ajout du type de connecteur
+            const typeEl = document.createElement('div');
+            typeEl.style.fontSize = '0.8rem';
+            typeEl.style.marginBottom = '0.5rem';
+            typeEl.style.color = '#0';
+            typeEl.textContent = connector.type;
+            element.appendChild(typeEl);
+            
+            // Pins du connecteur
             connector.pins.forEach((pin, index) => {
                 const pinEl = document.createElement('div');
                 pinEl.className = 'pin';
@@ -1387,6 +1397,7 @@
         // Ajoutons ces nouvelles fonctions pour gérer la mise à jour des connexions
         function updateAllConnections() {
             // Supprimer toutes les lignes SVG existantes
+            const designArea = document.getElementById('designArea');
             const existingSvgs = designArea.querySelectorAll('svg');
             existingSvgs.forEach(svg => svg.remove());
             
@@ -1410,9 +1421,15 @@
                   c.to.pin === toPin)
             );
             
-            // Supprimer la ligne SVG
-            const svg = document.querySelector(`svg[data-connection-id="${connectionId}"]`);
-            if (svg) svg.remove();
+            // Supprimer toutes les lignes SVG existantes et les redessiner
+            const designArea = document.getElementById('designArea');
+            const existingSvgs = designArea.querySelectorAll('svg');
+            existingSvgs.forEach(svg => svg.remove());
+            
+            // Redessiner toutes les connexions restantes
+            connections.forEach(connection => {
+                drawCompleteConnection(connection);
+            });
             
             showNotification("Connection deleted");
         }
@@ -1499,9 +1516,45 @@
             form.dataset.editId = id;
 
             // Modifier le handler de soumission
-            form.onsubmit = (e) => handleConnectorEdit(e);
+            form.onsubmit = handleConnectorEdit;
 
             showModal('connectorModal');
+        }
+
+        function handleConnectorEdit(e) {
+            e.preventDefault(); // Empêcher la soumission normale du formulaire
+            
+            const form = e.target;
+            const id = form.dataset.editId;
+            const connector = connectors.find(c => c.id === id);
+            
+            if (!connector) {
+                showNotification("Connector not found", "error");
+                return;
+            }
+            
+            // Mettre à jour les propriétés du connecteur
+            connector.name = form.name.value;
+            connector.type = form.type.value;
+            connector.pins = Array.from(form.querySelectorAll('[name="pins[]"]')).map(input => input.value);
+            
+            // Mettre à jour l'élément visuel
+            const element = document.getElementById(id);
+            if (element) {
+                element.remove();
+                createConnectorElement(connector);
+            }
+            
+            // Mettre à jour la liste des connecteurs
+            updateConnectorList();
+            
+            // Mettre à jour les connexions
+            updateAllConnections();
+            
+            // Fermer la modal
+            hideModal('connectorModal');
+            
+            showNotification("Connector updated successfully");
         }
 
         function editCable(id) {
@@ -1518,7 +1571,6 @@
             // Recréer les champs de couleurs
             const colorInputs = document.getElementById('colorInputs');
             colorInputs.innerHTML = cable.colors.map(color => {
-                // Séparer les codes de couleur si c'est une couleur double
                 const color1 = color.substring(0, 2);
                 const color2 = color.length > 2 ? color.substring(2) : '';
                 
@@ -1532,7 +1584,7 @@
                             ${color2 ? `
                                 <div class="selected-color" style="background-color: ${getColorCode(color2)}"></div>
                                 <span>${color2}</span>
-                            ` : '<span>Couleur 2</span>'}
+                            ` : '<span>Color 2</span>'}
                         </div>
                         <input type="hidden" name="colors[]" value="${color}" required>
                         <button type="button" class="delete-btn" onclick="this.parentElement.remove()">×</button>
@@ -1556,9 +1608,47 @@
             form.dataset.editId = id;
 
             // Modifier le handler de soumission
-            form.onsubmit = (e) => handleCableEdit(e);
+            form.onsubmit = handleCableEdit;
 
             showModal('cableModal');
+        }
+
+        function handleCableEdit(e) {
+            e.preventDefault(); // Empêcher la soumission normale du formulaire
+            
+            const form = e.target;
+            const id = form.dataset.editId;
+            const cable = cables.find(c => c.id === id);
+            
+            if (!cable) {
+                showNotification("Cable not found", "error");
+                return;
+            }
+            
+            // Mettre à jour les propriétés du câble
+            cable.name = form.name.value;
+            cable.type = form.type.value;
+            cable.gauge = form.gauge.value;
+            cable.length = form.length.value;
+            cable.colors = Array.from(form.querySelectorAll('[name="colors[]"]')).map(input => input.value);
+            
+            // Mettre à jour l'élément visuel
+            const element = document.getElementById(id);
+            if (element) {
+                element.remove();
+                createCableElement(cable);
+            }
+            
+            // Mettre à jour la liste des câbles
+            updateCableList();
+            
+            // Mettre à jour les connexions
+            updateAllConnections();
+            
+            // Fermer la modal
+            hideModal('cableModal');
+            
+            showNotification("Cable updated successfully");
         }
 
         // Ajoutons d'abord un bouton d'import dans la sidebar
