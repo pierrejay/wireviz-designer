@@ -172,7 +172,7 @@
         .cable-box {
             position: absolute;
             padding: 1rem;
-            background: #f8fafc;
+            background: transparent;
             border-radius: 0.25rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             cursor: move;
@@ -180,14 +180,27 @@
             min-width: 200px;
         }
 
+        .cable-title {
+            color: #666;
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
+        .cable-info {
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+
         .wire {
             padding: 0.5rem;
-            padding-left: 1rem;
             background: white;
             border-radius: 0.25rem;
             margin: 0.25rem 0;
             cursor: pointer;
             transition: all 0.2s;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
         }
 
         .wire:hover {
@@ -665,6 +678,10 @@
             };
             
             colorPicker2.onclick = () => {
+                if (!color1Value) {
+                    showNotification("Please select the first color first");
+                    return;
+                }
                 const palette = createColorPalette((colorCode) => {
                     color2Value = colorCode;
                     colorPicker2.innerHTML = `
@@ -836,16 +853,16 @@
             element.style.left = `${cable.x}px`;
             element.style.top = `${cable.y}px`;
             
+            // Titre du câble
             const titleEl = document.createElement('div');
-            titleEl.style.fontWeight = 'bold';
-            titleEl.style.marginBottom = '0.5rem';
-            titleEl.textContent = `${cable.name} (${cable.type})`;
+            titleEl.className = 'cable-title';
+            titleEl.textContent = cable.name;
             element.appendChild(titleEl);
             
+            // Informations du câble
             const infoEl = document.createElement('div');
-            infoEl.style.fontSize = '0.8rem';
-            infoEl.style.marginBottom = '0.5rem';
-            infoEl.textContent = `${cable.gauge}mm² - ${cable.length}mm`;
+            infoEl.className = 'cable-info';
+            infoEl.textContent = `${cable.type} - ${cable.gauge}mm² - ${cable.length}mm`;
             element.appendChild(infoEl);
             
             // Créer les brins du câble
@@ -853,7 +870,18 @@
                 const wireEl = document.createElement('div');
                 wireEl.className = 'wire';
                 wireEl.textContent = `${index + 1}: ${color}`;
-                wireEl.style.borderLeft = `4px solid ${getColorCode(color)}`;
+                
+                // Gérer les couleurs doubles
+                if (color.length > 2) {
+                    const color1 = color.substring(0, 2);
+                    const color2 = color.substring(2);
+                    wireEl.style.borderLeft = `4px solid ${getColorCode(color1)}`;
+                    wireEl.style.borderRight = `4px solid ${getColorCode(color2)}`;
+                } else {
+                    wireEl.style.borderLeft = `4px solid ${getColorCode(color)}`;
+                    wireEl.style.borderRight = `4px solid ${getColorCode(color)}`;
+                }
+                
                 wireEl.onclick = () => handleWireClick(cable, index + 1);
                 element.appendChild(wireEl);
             });
