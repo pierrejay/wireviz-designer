@@ -551,10 +551,10 @@
                 document.getElementById('colorInputs').innerHTML = `
                     <div class="input-group color-group">
                         <div class="color-picker-button">
-                            <span>Couleur 1</span>
+                            <span>Color 1</span>
                         </div>
                         <div class="color-picker-button secondary">
-                            <span>Couleur 2</span>
+                            <span>Color 2</span>
                         </div>
                         <input type="hidden" name="colors[]" required>
                         <button type="button" class="delete-btn" onclick="this.parentElement.remove()">×</button>
@@ -636,12 +636,12 @@
             // Première couleur
             const colorPicker1 = document.createElement('div');
             colorPicker1.className = 'color-picker-button';
-            colorPicker1.innerHTML = '<span>Couleur 1</span>';
+            colorPicker1.innerHTML = '<span>Color 1</span>';
             
             // Deuxième couleur
             const colorPicker2 = document.createElement('div');
             colorPicker2.className = 'color-picker-button secondary';
-            colorPicker2.innerHTML = '<span>Couleur 2</span>';
+            colorPicker2.innerHTML = '<span>Color 2</span>';
             
             // Input caché pour stocker la combinaison finale
             const hiddenInput = document.createElement('input');
